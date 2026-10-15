@@ -1,0 +1,10 @@
+# Set accelerators to your partition's actual Slurm GRES type.
+# Example: sky launch --infra slurm/lab-cluster/v100 hpc/sky/task.gpu.yaml
+# Only Slurm-allocated GPU devices are usable.
+name: hpc-gpu-example
+resources:
+  cpus: 4
+  memory: 16
+  accelerators: V100:1
+run: |
+  nvidia-smi -L

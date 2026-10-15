@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Read-only HPC workstation / login-node survey. Never requests allocations.
+set -euo pipefail
+echo "host: $(hostname)"
+echo "user: $(id -un)"
+for tool in sbatch srun sinfo singularity mksquashfs squashfuse fuse-overlayfs; do
+  if command -v "$tool" >/dev/null 2>&1; then
+    printf '%-16s %s\n' "$tool" "$(command -v "$tool")"
+  else
+    printf '%-16s (not installed)\n' "$tool"
+  fi
+done
+if command -v singularity >/dev/null 2>&1; then singularity --version; fi
+echo 'Slurm partitions (read-only):'
+if command -v sinfo >/dev/null 2>&1; then sinfo -h -o '%P %a %D %G'; fi
+echo 'Relevant storage:'
+if command -v findmnt >/dev/null 2>&1; then
+  for p in "$HOME" /tmp /ssd; do [[ -e $p ]] && findmnt -T "$p" -o TARGET,FSTYPE -n; done
+fi
+echo 'No allocations submitted, no CI runner changes.'

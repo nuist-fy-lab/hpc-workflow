@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scripts:
+    # This repository's public PRs MUST NOT run arbitrary code on HPC runners.
+    # The org's existing Slurm runner uses the p1shr 4 CPU / 8 GiB pool.
+    runs-on: [self-hosted, c2ln1-org]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate shell entry points
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n hpc/bin/hpc-submit hpc/bin/hpc-doctor
+          bash -n hpc/slurm/container.sbatch hpc/slurm/ray.sbatch
+      - name: Validate launcher commands without submitting a job
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=$(mktemp --suffix=.sif)
+          trap 'rm -f "$image"' EXIT
+          output=$(bash hpc/bin/hpc-submit --dry-run --partition p1shr --cpus 4 --mem 8G --time 00:30:00 --image "$image" -- echo hello)
+          [[ $output == *'--partition=p1shr'* ]]
+          [[ $output == *'--cpus-per-task=4'* ]]
+          [[ $output == *'container.sbatch'* ]]
+          output=$(bash hpc/bin/hpc-submit --dry-run --ray --nodes 2 --partition v100 --cpus 8 --mem 32G --time 02:00:00 --gres gpu:v100:1 --ray-gpus 1 --image "$image" -- python train_ray.py)
+          [[ $output == *'--nodes=2'* ]]
+          [[ $output == *'--ntasks=2'* ]]
+          [[ $output == *'--exclusive'* ]]
+          [[ $output == *'ray.sbatch'* ]]
+          if bash hpc/bin/hpc-submit --dry-run --partition p1shr --cpus 4 --mem 8G --time 00:30:00 --image "$image" --ray-gpus 1 -- echo invalid; then
+            echo "Expected invalid Ray flag to fail" >&2
+            exit 1
+          fi
+      - name: Refuse committed credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -n -E -- '-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----|gh[opsu]_[A-Za-z0-9]{20,}|tskey-[A-Za-z0-9-]{16,}'; then
+            echo 'Sensitive material detected' >&2
+            exit 1
+          fi

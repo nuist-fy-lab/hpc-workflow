@@ -1,0 +1,11 @@
+# SkyPilot Slurm adapter runs on the host (no Pyxis on c2ln1).
+# Supply an explicit --infra slurm/CLUSTER/PARTITION at launch.
+# This demonstration does not build images or install packages.
+name: hpc-cpu-example
+resources:
+  cpus: 4
+  memory: 8
+run: |
+  echo "Slurm job: ${SLURM_JOB_ID:-unknown}"
+  hostname
+  singularity --version

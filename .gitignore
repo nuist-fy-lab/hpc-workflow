@@ -1,0 +1,12 @@
+*.sif
+*.sqsh
+*.squashfs
+*.ext3
+*.log
+*.out
+*.err
+.env
+.env.*
+.sky/
+.slurm/
+__pycache__/
