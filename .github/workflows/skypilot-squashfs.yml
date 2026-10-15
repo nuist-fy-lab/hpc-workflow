@@ -1,0 +1,53 @@
+name: Build persistent SkyPilot SquashFS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-image:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Build unavailable binary wheel in cloud CI
+        run: |
+          python -m pip wheel --no-deps \
+            --wheel-dir hpc/images/skypilot/wheels python-hostlist==2.3.0
+      - name: Build and validate container on GitHub runner
+        run: |
+          docker build \
+            --file hpc/images/skypilot/Dockerfile \
+            --tag fy-lab-sky:0.14.0 \
+            hpc/images/skypilot
+          docker run --rm fy-lab-sky:0.14.0 python -m pip check
+          docker run --rm fy-lab-sky:0.14.0 sky --version
+      - name: Convert container filesystem into a single SquashFS file
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools
+          mkdir -p image-root dist
+          cid=$(docker create fy-lab-sky:0.14.0)
+          trap 'docker rm -f "$cid" >/dev/null 2>&1 || true' EXIT
+          docker export "$cid" | sudo tar -xpf - -C image-root
+          test -x image-root/usr/local/bin/python
+          test -x image-root/usr/local/bin/sky
+          sudo mksquashfs image-root dist/skypilot-0.14.0-py311-amd64.sqsh \
+            -noappend -comp xz -b 1M -processors 2 -all-root -no-progress
+          cd dist
+          sha256sum skypilot-0.14.0-py311-amd64.sqsh > SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skypilot-0.14.0-py311-amd64-squashfs
+          path: |
+            dist/skypilot-0.14.0-py311-amd64.sqsh
+            dist/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 30

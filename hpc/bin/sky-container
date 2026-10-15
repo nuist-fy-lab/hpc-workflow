@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Use the immutable SquashFS image installed in persistent storage on c2ln1.
+set -euo pipefail
+image="${HPC_SKYPILOT_IMAGE:-$HOME/.local/opt/hpc-workflow/images/skypilot/current.sqsh}"
+[[ -f "$image" ]] || {
+  printf 'SkyPilot image missing: %s\n' "$image" >&2
+  exit 2
+}
+command -v singularity >/dev/null || {
+  echo 'singularity is required' >&2
+  exit 2
+}
+exec singularity exec --cleanenv --no-eval \
+  --env PATH=/usr/local/bin:/usr/bin:/bin \
+  "$image" /usr/local/bin/sky "$@"

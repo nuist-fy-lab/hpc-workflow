@@ -85,4 +85,20 @@ sky launch --infra slurm/lab-cluster/v100 hpc/sky/task.gpu.yaml
 Pyxis/Enroot. The two sample SkyPilot tasks run directly on the allocated host.
 SkyPilot does not bypass queues, reservations, GPU permissions, or policies.
 
+### Persistent single-file SkyPilot runtime
+
+The optional GitHub-hosted `skypilot-squashfs.yml` workflow builds SkyPilot
+0.14.0 and all Python dependencies in a read-only SquashFS image. Download
+the verified `.sqsh` artifact to persistent shared storage:
+`~/.local/opt/hpc-workflow/images/skypilot/current.sqsh`.
+The launcher `hpc/bin/sky-container` calls `singularity exec` directly on
+this image, **without unpacking a Python venv on the login node**.
+
+Deploy the `sky-container` launcher from this repository and point
+`~/.local/bin/sky` to it only after the container passes a real
+`sky --version` check on the target host. Keep the target Slurm SSH
+credentials only in the user-owned `~/.slurm/config` (not in Git).
+Rootless Singularity image execution and SkyPilot Slurm authentication
+require separate compatibility checks before submitting actual research jobs.
+
 VS Code SSH/Tunnel is intentionally out of scope.

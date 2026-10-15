@@ -21,6 +21,7 @@ jobs:
         run: |
           set -euo pipefail
           bash -n hpc/bin/hpc-submit hpc/bin/hpc-doctor
+          bash -n hpc/bin/sky-container
           bash -n hpc/slurm/container.sbatch hpc/slurm/ray.sbatch
       - name: Validate launcher commands without submitting a job
         shell: bash
