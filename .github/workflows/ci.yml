@@ -10,9 +10,9 @@ permissions:
 
 jobs:
   scripts:
-    # This repository's public PRs MUST NOT run arbitrary code on HPC runners.
-    # The org's existing Slurm runner uses the p1shr 4 CPU / 8 GiB pool.
-    runs-on: [self-hosted, c2ln1-org]
+    # Public repository: never expose the organization's HPC self-hosted runner.
+    # Existing p1shr 4 CPU / 8 GiB runner remains dedicated to private repos.
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7

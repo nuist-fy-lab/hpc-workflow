@@ -22,6 +22,6 @@ Slurm accounts, or network routes are checked in. Jobs require explicit
 resources and are subject to the cluster's ordinary permissions and queueing.
 This repository never submits a job in CI.
 
-For safety on a **public** repository, the self-hosted CI workflow runs only
-on trusted pushes to the protected default branch or explicit manual dispatch.
-It does not execute third-party pull request code on HPC runners.
+For safety on this **public** repository, static CI runs on GitHub-hosted
+workers. The laboratory's existing Slurm self-hosted CI runner is unchanged
+and never exposed to code from the public repository.

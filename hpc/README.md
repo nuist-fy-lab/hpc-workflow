@@ -1,4 +1,4 @@
-# c2ln1 scientific Slurm workflows
+# Scientific Slurm workflows
 
 This is **not** the GitHub Actions Slurm runner. Its existing long-lived
 `p1shr / 4 CPUs / 8 GiB` allocation is not modified by any tool here.

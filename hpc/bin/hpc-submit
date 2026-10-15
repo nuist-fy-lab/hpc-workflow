@@ -65,7 +65,9 @@ else
   ((nodes == 1)) || die 'multi-node execution requires --ray'
   ((ray_gpus == 0)) || die '--ray-gpus requires --ray'
 fi
-script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+script_path=$(readlink -f -- "${BASH_SOURCE[0]}")
+[[ -n $script_path ]] || die 'cannot resolve the installed launcher path'
+script_dir=$(cd -- "$(dirname -- "$script_path")" && pwd)
 job_script="$script_dir/../slurm/$( ((ray)) && printf ray || printf container ).sbatch"
 [[ -f $job_script ]] || die "missing job script: $job_script"
 log_dir="${HPC_LOG_DIR:-$HOME/.local/state/hpc-workflow/logs}"
