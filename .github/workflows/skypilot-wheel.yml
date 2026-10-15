@@ -1,0 +1,36 @@
+name: Build SkyPilot Slurm dependency wheel
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-hostlist:
+    # Build dependencies in GitHub-hosted CI, never on RS/c2ln1.
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Build python-hostlist wheel
+        run: |
+          python -m pip wheel --no-deps --wheel-dir dist python-hostlist
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          wheels = list(Path('dist').glob('python_hostlist-*.whl'))
+          assert len(wheels) == 1, wheels
+          with ZipFile(wheels[0]) as wheel:
+              assert any(name.endswith('.dist-info/METADATA') for name in wheel.namelist())
+          print('Produced:', wheels[0].name)
+          PY
+      - name: Publish wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-hostlist-wheel-py311-linux-amd64
+          path: dist/*.whl
+          if-no-files-found: error
