@@ -1,0 +1,57 @@
+name: Update c2ln1 userspace Tailscale
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Tailscale stable version to stage in the shared user home
+        required: true
+        default: '1.104.5'
+
+permissions:
+  contents: read
+
+jobs:
+  stage-tailscale:
+    name: Stage official Tailscale binaries on c2ln1
+    runs-on: [self-hosted, linux, x64, c2ln1-org]
+    timeout-minutes: 20
+    env:
+      TAILSCALE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Download, verify and atomically activate release
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="$TAILSCALE_VERSION"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 2
+          [[ "$(id -un)" == "fengziru2025" ]] || { echo 'Unexpected runner user'; exit 3; }
+          [[ "$(uname -m)" == "x86_64" ]] || { echo 'Unexpected runner architecture'; exit 4; }
+
+          root="$HOME/.local/opt"
+          dest="$root/tailscale-$version"
+          base="https://pkgs.tailscale.com/stable/tailscale_${version}_amd64.tgz"
+          work="$(mktemp -d "${RUNNER_TEMP:-/tmp}/tailscale-stage.XXXXXXXX")"
+          trap 'rm -rf "$work"' EXIT
+          mkdir -p "$root"
+
+          curl --fail --location --silent --show-error --retry 3 --connect-timeout 15 \
+            --output "$work/tailscale.tgz" "$base"
+          curl --fail --location --silent --show-error --retry 3 --connect-timeout 15 \
+            --output "$work/tailscale.sha256" "$base.sha256"
+          printf '%s  %s\n' "$(cat "$work/tailscale.sha256")" "$work/tailscale.tgz" | sha256sum --check
+
+          tar -xzf "$work/tailscale.tgz" -C "$work"
+          release="$work/tailscale_${version}_amd64"
+          [[ -x "$release/tailscale" && -x "$release/tailscaled" ]]
+          [[ "$("$release/tailscale" version | head -n 1)" == "$version" ]]
+          if [[ ! -e "$dest" ]]; then
+            mv "$release" "$dest"
+          else
+            [[ "$("$dest/tailscale" version | head -n 1)" == "$version" ]]
+          fi
+
+          ln -sfn "$dest" "$root/tailscale-current.next"
+          mv -Tf "$root/tailscale-current.next" "$root/tailscale-current"
+          echo "Staged Tailscale $version in $dest"
+          echo 'The login-node userspace tailscaled service must be restarted separately.'
